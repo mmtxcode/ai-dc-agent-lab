@@ -32,7 +32,7 @@ Get the repo and set it up:
 
 ```powershell
 mkdir C:\lab -Force; cd C:\lab
-git clone <REPO_URL> ai-dc-agent-lab
+git clone https://github.com/mmtxcode/ai-dc-agent-lab.git
 cd ai-dc-agent-lab
 powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
 ```

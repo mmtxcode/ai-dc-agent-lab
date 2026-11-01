@@ -47,7 +47,7 @@ See [labs/README.md](labs/README.md) for the full plan.
 ## Quick start (jump host)
 
 ```powershell
-git clone <this repo>
+git clone https://github.com/mmtxcode/ai-dc-agent-lab.git
 cd ai-dc-agent-lab
 powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
 # fill in .env
