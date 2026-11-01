@@ -55,13 +55,16 @@ powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
 .\.venv\Scripts\python.exe agent\main.py
 ```
 
+**Instructors:** before the event, run [docs/connection-test-plan.md](docs/connection-test-plan.md) on each pod.
+
 ## Repo layout
 
 ```
 agent/          main.py (agent loop), llm.py (model adapter), servers.json
 mcp_servers/    intersight_server.py, aci_server.py  (ND's server runs on ND itself)
 labs/           step-by-step guides (+ images/ for screenshots)
-scripts/        setup.ps1, check_lab.py, test_llm_toolcall.py
+scripts/        setup.ps1, check_lab.py, mcp_probe.py, test_llm_toolcall.py
+docs/           connection-test-plan.md (instructor pre-flight)
 .vscode/        mcp.json (the same servers, usable from VS Code's own agent mode)
 logs/           audit.jsonl (created at runtime, git-ignored)
 ```

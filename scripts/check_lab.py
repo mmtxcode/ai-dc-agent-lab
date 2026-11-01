@@ -1,6 +1,7 @@
 """
 check_lab.py — confirm every lab system is reachable before starting.
 Run from the repo root:  python scripts/check_lab.py
+Just some systems:       python scripts/check_lab.py --only env intersight aci nd llm
 Each check prints PASS or FAIL with the reason.
 """
 from __future__ import annotations
@@ -18,9 +19,16 @@ load_dotenv(ROOT / ".env")
 urllib3.disable_warnings()
 results = []
 
+# python scripts/check_lab.py --only aci nd   -> run just those checks
+ONLY = {a.lower() for a in sys.argv[sys.argv.index("--only") + 1:]} if "--only" in sys.argv else set()
+KEYS = {".env": "env", "Intersight": "intersight", "ACI (APIC)": "aci",
+        "Nexus Dash.": "nd", "AI model": "llm"}
+
 
 def check(name):
     def wrap(fn):
+        if ONLY and KEYS[name] not in ONLY:
+            return fn
         try:
             detail = fn()
             results.append(True)

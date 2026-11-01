@@ -80,7 +80,7 @@ def is_read_only(tool, server: str = "") -> bool:
 
 class Agent:
     def __init__(self, server_names: list[str] | None):
-        self.llm = LLM()
+        self.llm = None          # created on first question, so MCP can be tested without a model
         self.stack = AsyncExitStack()
         self.tools = {}          # tool name -> (server name, session, mcp tool)
         self.server_names = server_names
@@ -172,6 +172,8 @@ class Agent:
     async def ask(self, question: str):
         self.messages.append({"role": "user", "content": question})
         for _ in range(MAX_STEPS):
+            if self.llm is None:
+                self.llm = LLM()
             reply = await asyncio.to_thread(self.llm.chat, self.messages, self.tool_specs())
             self.messages.append(reply["raw_message"])
             if not reply["tool_calls"]:
