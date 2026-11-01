@@ -18,15 +18,19 @@ import argparse
 import asyncio
 import json
 import os
+import re
 import shutil
 import sys
 import time
 from contextlib import AsyncExitStack
 from pathlib import Path
 
+import httpx
 from dotenv import load_dotenv
 from mcp import ClientSession, StdioServerParameters
+from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
+from mcp.client.streamable_http import streamablehttp_client
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "agent"))
@@ -44,6 +48,7 @@ Cisco Intersight (UCS servers, read-only), Cisco ACI (APIC), and Cisco Nexus Das
 Use the tools to get real data; never invent device names, scores, or faults.
 Before any change, state exactly what you will create or delete.
 When a question spans domains, gather data from each, then connect the dots.
+Nexus Dashboard tools take time ranges; call time_now first to resolve phrases like 'last hour'.
 Keep answers short and use tables where they help."""
 
 # ANSI colors (work in the VS Code terminal and Windows Terminal)
@@ -60,7 +65,15 @@ def audit(entry: dict):
         f.write(json.dumps(entry) + "\n")
 
 
-def is_read_only(tool) -> bool:
+# Servers listed with "read_only": true in servers.json (e.g. Nexus Dashboard's
+# built-in MCP server, which Cisco documents as GET-only) count as read-only
+# even if their tools don't carry the readOnlyHint annotation.
+READ_ONLY_SERVERS: set[str] = set()
+
+
+def is_read_only(tool, server: str = "") -> bool:
+    if server in READ_ONLY_SERVERS:
+        return True
     ann = getattr(tool, "annotations", None)
     return bool(ann and getattr(ann, "readOnlyHint", False))
 
@@ -73,16 +86,36 @@ class Agent:
         self.server_names = server_names
         self.messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
+    async def _open(self, spec: dict):
+        """Open one MCP connection. Two kinds, set in agent/servers.json:
+           local  — {"command", "args"}: we start the server; MCP runs over stdio
+           remote — {"url", "headers"}: the server already runs (e.g. on Nexus
+                    Dashboard); MCP runs over HTTPS"""
+        if "url" in spec:
+            verify = str(spec.get("verify_tls", "true")).lower() == "true"
+
+            def client_factory(headers=None, timeout=None, auth=None):
+                return httpx.AsyncClient(headers=headers, timeout=timeout, auth=auth,
+                                         verify=verify, follow_redirects=True)
+
+            opener = sse_client if spec.get("transport") == "sse" else streamablehttp_client
+            streams = await self.stack.enter_async_context(
+                opener(spec["url"], headers=spec.get("headers"), httpx_client_factory=client_factory))
+            return streams[0], streams[1]
+        cmd = sys.executable if spec["command"] == "python" else shutil.which(spec["command"])
+        params = StdioServerParameters(command=cmd, args=[str(ROOT / a) for a in spec["args"]],
+                                       env=dict(os.environ), cwd=str(ROOT))
+        return await self.stack.enter_async_context(stdio_client(params))
+
     async def connect(self):
-        config = json.loads((ROOT / "agent" / "servers.json").read_text())
+        # ${VAR} in servers.json is filled in from .env, so no secrets live in the file
+        raw = (ROOT / "agent" / "servers.json").read_text()
+        config = json.loads(re.sub(r"\$\{(\w+)\}", lambda m: os.getenv(m.group(1), ""), raw))
         for name, spec in config.items():
             if self.server_names and name not in self.server_names:
                 continue
-            cmd = sys.executable if spec["command"] == "python" else shutil.which(spec["command"])
-            params = StdioServerParameters(command=cmd, args=[str(ROOT / a) for a in spec["args"]],
-                                           env=dict(os.environ), cwd=str(ROOT))
             try:
-                read, write = await self.stack.enter_async_context(stdio_client(params))
+                read, write = await self._open(spec)
                 session = await self.stack.enter_async_context(ClientSession(read, write))
                 await session.initialize()
                 listing = await session.list_tools()
@@ -91,6 +124,8 @@ class Agent:
                 continue
             for t in listing.tools:
                 self.tools[t.name] = (name, session, t)
+            if str(spec.get("read_only", "")).lower() == "true":
+                READ_ONLY_SERVERS.add(name)
             print(f"{C['green']}✓ {name}{C['off']}: {len(listing.tools)} tools")
 
     def tool_specs(self) -> list[dict]:
@@ -100,7 +135,7 @@ class Agent:
 
     def print_tools(self):
         for name, (server, _, t) in sorted(self.tools.items()):
-            tag = "read " if is_read_only(t) else f"{C['yellow']}WRITE{C['off']}"
+            tag = "read " if is_read_only(t, server) else f"{C['yellow']}WRITE{C['off']}"
             print(f"  [{tag}] {C['cyan']}{name}{C['off']}  {C['dim']}({server}){C['off']}")
             print(f"          {C['dim']}{(t.description or '').splitlines()[0]}{C['off']}")
 
@@ -111,7 +146,7 @@ class Agent:
         server, session, tool = self.tools[name]
         print(f"{C['cyan']}→ {server}.{name}{C['off']}({json.dumps(args)})")
 
-        if not is_read_only(tool) and not AUTO_APPROVE:
+        if not is_read_only(tool, server) and not AUTO_APPROVE:
             answer = input(f"{C['yellow']}  This tool CHANGES the {server} environment. "
                            f"Approve? [y/N] {C['off']}").strip().lower()
             if answer != "y":

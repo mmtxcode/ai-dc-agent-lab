@@ -15,11 +15,16 @@ end to end.
    ▼
  agent/main.py ── HTTPS ──► Gemini 3.1 Flash  (decides which tool to call)
    │
-   │  MCP over stdio (list_tools / call_tool)
-   ├──► mcp_servers/intersight_server.py ──► Intersight API   (read-only key)
-   ├──► mcp_servers/aci_server.py        ──► APIC simulator   (read + approved writes)
-   └──► mcp_servers/nd_server.py         ──► Nexus Dashboard  (CML fabric)
+   │  MCP (list_tools / call_tool)
+   ├─ stdio ─► mcp_servers/intersight_server.py ──► Intersight API  (read-only key)   ┐ servers we
+   ├─ stdio ─► mcp_servers/aci_server.py        ──► APIC simulator  (read + approved  ┘ built
+   │                                                                  writes)
+   └─ HTTPS ─► Nexus Dashboard 4.3.1 built-in MCP server  (/api/v1/mcp, API key)  ← vendor-provided
 ```
+
+The lab shows both ways MCP shows up in real life: servers **you build**
+around an API (Intersight, ACI) and a server **the vendor ships** inside the
+product (Nexus Dashboard 4.3.1). The agent treats them the same.
 
 The model never talks to your infrastructure directly. It can only ask for a
 tool by name; the agent runs it, asks you first if it changes anything, and
@@ -33,7 +38,7 @@ logs every call to `logs/audit.jsonl`.
 | 01 | [Meet MCP with Intersight](labs/01-meet-mcp-intersight.md) | 10 min | What a tool is, how the agent picks one |
 | 02 | Monitor ACI | 8 min | Health, faults, summarising noise |
 | 03 | Configure ACI safely | 10 min | Write tools, human approval, verify in the GUI |
-| 04 | Nexus Dashboard and the CML fabric | 8 min | Fabrics, switches, anomalies |
+| 04 | Nexus Dashboard's built-in MCP server | 8 min | Remote MCP, API keys, RBAC, anomalies |
 | 05 | Cross-domain troubleshooting | 10 min | One question, three domains |
 | 06 | Wrap-up: guardrails and the audit log | 4 min | What production would need |
 
@@ -54,7 +59,7 @@ powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
 
 ```
 agent/          main.py (agent loop), llm.py (model adapter), servers.json
-mcp_servers/    intersight_server.py, aci_server.py, nd_server.py
+mcp_servers/    intersight_server.py, aci_server.py  (ND's server runs on ND itself)
 labs/           step-by-step guides (+ images/ for screenshots)
 scripts/        setup.ps1, check_lab.py, test_llm_toolcall.py
 .vscode/        mcp.json (the same servers, usable from VS Code's own agent mode)

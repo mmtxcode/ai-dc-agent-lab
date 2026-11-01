@@ -70,17 +70,25 @@ def _():
 
 @check("Nexus Dash.")
 def _():
-    s = requests.Session()
-    s.verify = os.getenv("ND_VERIFY_TLS", "false").lower() == "true"
-    url = os.getenv("ND_URL", "").rstrip("/")
-    r = s.post(f"{url}/api/v1/infra/login", timeout=30, json={
-        "userName": os.getenv("ND_USER"), "userPasswd": os.getenv("ND_PASSWORD"),
-        "domain": os.getenv("ND_DOMAIN", "DefaultAuth")})
-    r.raise_for_status()
-    s.cookies.set("AuthCookie", r.json()["jwttoken"])
-    r = s.get(f"{url}/api/v1/manage/fabrics", timeout=30)
-    r.raise_for_status()
-    return "logged in, fabrics endpoint OK"
+    import asyncio
+    import httpx
+    from mcp import ClientSession
+    from mcp.client.streamable_http import streamablehttp_client
+
+    verify = os.getenv("ND_VERIFY_TLS", "false").lower() == "true"
+    url = os.getenv("ND_URL", "").rstrip("/") + "/api/v1/mcp"
+    headers = {"X-Nd-Apikey": os.getenv("ND_API_KEY", ""), "X-Nd-Username": os.getenv("ND_USER", "")}
+
+    def factory(headers=None, timeout=None, auth=None):
+        return httpx.AsyncClient(headers=headers, timeout=timeout, auth=auth, verify=verify)
+
+    async def probe():
+        async with streamablehttp_client(url, headers=headers, httpx_client_factory=factory) as (r, w, _):
+            async with ClientSession(r, w) as session:
+                await session.initialize()
+                return len((await session.list_tools()).tools)
+
+    return f"built-in MCP server answered with {asyncio.run(probe())} tools"
 
 
 @check("AI model")

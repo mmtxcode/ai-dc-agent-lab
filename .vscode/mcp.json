@@ -1,4 +1,9 @@
 {
+  "inputs": [
+    { "id": "nd-api-key", "type": "promptString", "description": "Nexus Dashboard API key", "password": true },
+    { "id": "nd-user", "type": "promptString", "description": "Nexus Dashboard username" },
+    { "id": "nd-host", "type": "promptString", "description": "Nexus Dashboard IP or hostname" }
+  ],
   "servers": {
     "intersight": {
       "type": "stdio",
@@ -11,9 +16,12 @@
       "args": ["${workspaceFolder}/mcp_servers/aci_server.py"]
     },
     "nd": {
-      "type": "stdio",
-      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
-      "args": ["${workspaceFolder}/mcp_servers/nd_server.py"]
+      "type": "http",
+      "url": "https://${input:nd-host}/api/v1/mcp",
+      "headers": {
+        "X-Nd-Apikey": "${input:nd-api-key}",
+        "X-Nd-Username": "${input:nd-user}"
+      }
     }
   }
 }

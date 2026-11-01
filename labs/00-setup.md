@@ -22,7 +22,7 @@ confirm everything is reachable.
   PASS  .env         all values set
   PASS  Intersight   12 servers visible
   PASS  ACI (APIC)   4 fabric nodes
-  PASS  Nexus Dash.  logged in, fabrics endpoint OK
+  PASS  Nexus Dash.  built-in MCP server answered with 10 tools
   PASS  AI model     model replied: READY
 
 All checks passed — you are ready for Lab 01.
