@@ -1,0 +1,4 @@
+mcp>=1.12,<2        # MCP Python SDK v1 (FastMCP). v2 renames FastMCP -> MCPServer.
+requests>=2.31
+python-dotenv>=1.0
+intersight-auth>=0.3

@@ -1,0 +1,19 @@
+{
+  "servers": {
+    "intersight": {
+      "type": "stdio",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": ["${workspaceFolder}/mcp_servers/intersight_server.py"]
+    },
+    "aci": {
+      "type": "stdio",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": ["${workspaceFolder}/mcp_servers/aci_server.py"]
+    },
+    "nd": {
+      "type": "stdio",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": ["${workspaceFolder}/mcp_servers/nd_server.py"]
+    }
+  }
+}

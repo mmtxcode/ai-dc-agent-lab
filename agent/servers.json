@@ -1,0 +1,5 @@
+{
+  "intersight": { "command": "python", "args": ["mcp_servers/intersight_server.py"] },
+  "aci":        { "command": "python", "args": ["mcp_servers/aci_server.py"] },
+  "nd":         { "command": "python", "args": ["mcp_servers/nd_server.py"] }
+}
