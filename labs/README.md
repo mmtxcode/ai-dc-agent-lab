@@ -6,7 +6,7 @@ data from all three domains.
 
 **Pod per attendee:** Windows jump host (VS Code, Python), ACI simulator,
 virtual Nexus Dashboard 4.3.1 with a CML NX-OS fabric onboarded and a per-pod
-ND API key, shared read-only Intersight key, Gemini 3.1 Flash endpoint.
+ND API key, shared read-only Intersight key, Gemini 3.1 Flash Lite via the ai.connection.com gateway.
 
 ## Timing (55 min, 5 min buffer)
 
@@ -26,7 +26,7 @@ across any MCP client.
 
 ## Build to-dos
 
-- [ ] Confirm Gemini endpoint format with `scripts/test_llm_toolcall.py`
+- [ ] Confirm tool calling works on the gateway with `scripts/test_llm_toolcall.py` (Test 2)
 - [ ] Create an ND API key per pod (user menu → Manage API keys) for a
       read-only user, and put it in each pod's `.env`
 - [ ] Confirm the agent reaches `https://<nd>/api/v1/mcp` from the jump host

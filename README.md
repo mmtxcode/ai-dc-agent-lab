@@ -13,7 +13,7 @@ end to end.
  You (VS Code terminal on the Windows jump host)
    │
    ▼
- agent/main.py ── HTTPS ──► Gemini 3.1 Flash  (decides which tool to call)
+ agent/main.py ── HTTPS ──► Gemini 3.1 Flash Lite  (decides which tool to call)
    │
    │  MCP (list_tools / call_tool)
    ├─ stdio ─► mcp_servers/intersight_server.py ──► Intersight API  (read-only key)   ┐ servers we

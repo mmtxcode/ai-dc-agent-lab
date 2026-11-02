@@ -4,7 +4,8 @@ llm.py — one small adapter between the agent and the model endpoint.
 The agent keeps its conversation in OpenAI-style messages. This module
 translates to whatever the endpoint speaks, set by LLM_FORMAT in .env:
 
-    openai  -> POST {LLM_URL}/chat/completions        (OpenAI-compatible gateway)
+    openai  -> POST {LLM_URL}/chat/completions        (OpenAI-compatible gateway,
+               including Azure-style /openai/deployments/<name>/chat/completions)
     gemini  -> POST {LLM_URL}/v1beta/models/{model}:generateContent  (native Gemini)
 
 If the endpoint turns out to need something different, this is the only
@@ -35,27 +36,45 @@ class LLM:
     def __init__(self):
         self.url = os.environ["LLM_URL"].rstrip("/")
         self.fmt = os.getenv("LLM_FORMAT", "openai").lower()
-        self.model = os.getenv("LLM_MODEL", "gemini-3.1-flash")
-        self.token = os.getenv("LLM_BEARER_TOKEN", "")
+        self.model = os.getenv("LLM_MODEL", "gemini-3.1-flash-lite")
+        # Main credential. LLM_API_KEY_HEADER picks how it's sent:
+        #   Authorization (default) -> "Authorization: Bearer <key>"
+        #   anything else, e.g. api-key -> "api-key: <key>"
+        self.api_key = os.getenv("LLM_API_KEY") or os.getenv("LLM_BEARER_TOKEN", "")
+        self.api_key_header = os.getenv("LLM_API_KEY_HEADER", "Authorization")
+        # Optional app key: as a header, or as a body field. With
+        # LLM_APP_KEY_JSON_KEY set, the field holds a JSON string, e.g.
+        #   "user": "{\"appkey\": \"<key>\"}"
         self.app_key = os.getenv("LLM_APP_KEY", "")
         self.key_header = os.getenv("LLM_APP_KEY_HEADER", "")
         self.key_field = os.getenv("LLM_APP_KEY_FIELD", "")
+        self.key_json_key = os.getenv("LLM_APP_KEY_JSON_KEY", "")
+        # Azure-style deployment URLs carry the model in the path, so the
+        # body usually shouldn't send "model" as well
+        self.send_model = os.getenv("LLM_SEND_MODEL", "true").lower() == "true"
+        self.api_version = os.getenv("LLM_API_VERSION", "")
+        self.stop = [x for x in os.getenv("LLM_STOP", "").split(",") if x]
         self.verify = os.getenv("LLM_VERIFY_TLS", "true").lower() == "true"
         self.timeout = int(os.getenv("LLM_TIMEOUT", "120"))
 
     # ---- shared helpers -------------------------------------------------
     def _headers(self) -> dict:
-        h = {"Content-Type": "application/json"}
-        if self.token:
-            h["Authorization"] = f"Bearer {self.token}"
+        h = {"Content-Type": "application/json", "Accept": "application/json"}
+        if self.api_key:
+            if self.api_key_header.lower() == "authorization":
+                h["Authorization"] = f"Bearer {self.api_key}"
+            else:
+                h[self.api_key_header] = self.api_key
         if self.app_key and self.key_header:
             h[self.key_header] = self.app_key
         return h
 
     def _post(self, endpoint: str, body: dict) -> dict:
         if self.app_key and self.key_field:
-            body[self.key_field] = self.app_key
-        r = requests.post(endpoint, headers=self._headers(), json=body,
+            body[self.key_field] = (json.dumps({self.key_json_key: self.app_key})
+                                    if self.key_json_key else self.app_key)
+        params = {"api-version": self.api_version} if self.api_version else None
+        r = requests.post(endpoint, headers=self._headers(), json=body, params=params,
                           verify=self.verify, timeout=self.timeout)
         if r.status_code >= 400:
             raise RuntimeError(f"LLM HTTP {r.status_code}: {r.text[:800]}")
@@ -74,7 +93,11 @@ class LLM:
     def _chat_openai(self, messages, tools):
         endpoint = self.url if self.url.endswith("/chat/completions") else f"{self.url}/chat/completions"
         clean = [{k: v for k, v in m.items() if not k.startswith("_")} for m in messages]
-        body = {"model": self.model, "messages": clean}
+        body = {"messages": clean}
+        if self.send_model:
+            body["model"] = self.model
+        if self.stop:
+            body["stop"] = self.stop
         if tools:
             body["tools"] = [{"type": "function", "function": t} for t in tools]
         msg = self._post(endpoint, body)["choices"][0]["message"]

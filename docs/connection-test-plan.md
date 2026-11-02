@@ -10,8 +10,8 @@ fails you know exactly which layer broke:
 
 Don't skip ahead. Each step assumes the ones before it passed.
 
-Placeholders: `<APIC_IP>`, `<ND_IP>`, `<LLM_HOST>` (the host part of the
-Gemini URL you were given).
+Placeholders: `<APIC_IP>`, `<ND_IP>`. The model gateway is
+`ai.connection.com`.
 
 ---
 
@@ -58,7 +58,7 @@ code .env
 
 | Section | What to enter |
 |---------|---------------|
-| AI model | `LLM_URL`, `LLM_BEARER_TOKEN`, `LLM_APP_KEY`. Leave `LLM_FORMAT=openai` for now; Step 5 tells you if it should be `gemini`. |
+| AI model | Only `LLM_API_KEY` (your `api-key` header value) and `LLM_APP_KEY` (the `appkey` value). The URL, deployment and other settings already match your curl test. |
 | Intersight | `INTERSIGHT_KEY_ID`, and save the secret key as `C:\lab\keys\intersight.pem` (or change the path). |
 | ACI | `APIC_URL=https://<APIC_IP>`, `APIC_USER`, `APIC_PASSWORD` |
 | Nexus Dashboard | `ND_URL=https://<ND_IP>` (no trailing slash), `ND_USER`, `ND_API_KEY` |
@@ -75,7 +75,7 @@ user the key belongs to.
 Test-NetConnection <APIC_IP>        -Port 443 | Select ComputerName, TcpTestSucceeded
 Test-NetConnection <ND_IP>          -Port 443 | Select ComputerName, TcpTestSucceeded
 Test-NetConnection intersight.com   -Port 443 | Select ComputerName, TcpTestSucceeded
-Test-NetConnection <LLM_HOST>       -Port 443 | Select ComputerName, TcpTestSucceeded
+Test-NetConnection ai.connection.com -Port 443 | Select ComputerName, TcpTestSucceeded
 ```
 
 ✅ `TcpTestSucceeded : True` on all four.
@@ -149,12 +149,32 @@ adjusting for your Intersight setup.
 python scripts\test_llm_toolcall.py
 ```
 
+It runs two tests with the agent's own model code:
+
+1. **Plain chat:** the same quantum-computing question as your curl test.
+   An answer means the URL, `api-key` header and app key are right.
+2. **Tool calling:** the model is offered one tool and must ask to call it.
+   The agent can't use MCP without this.
+
+Expected:
+
+```
+Test 1 — plain chat
+  PASS  Quantum computing uses qubits, which ...
+
+Test 2 — tool calling
+  PASS  model asked to call get_fabric_health({"fabric": "LAB-FABRIC"})
+
+The model is ready for the agent.
+```
+
 | Result | Do this |
 |--------|---------|
-| `PASS — model requested a tool call` | Done. Keep this `LLM_FORMAT`. |
-| `Unexpected response shape` or HTTP 404 | Set `LLM_FORMAT=gemini` in `.env`, run again. |
-| HTTP 401 / 403 | Token or app key not accepted. Check how the app key is passed: set **either** `LLM_APP_KEY_HEADER` (e.g. `x-api-key`) **or** `LLM_APP_KEY_FIELD` (e.g. `user`), per the endpoint's docs. The printed error body usually says which. |
-| `FAIL — no tool call returned` | The endpoint works but ignored the tool. Send me the output. |
+| Test 1 FAIL, HTTP 401 / 403 | `LLM_API_KEY` or `LLM_APP_KEY` is wrong. Run your curl test with the same values to compare. |
+| Test 1 FAIL, HTTP 400 mentioning `model` | Leave `LLM_SEND_MODEL=false`; the deployment name in the URL picks the model. |
+| Test 1 FAIL, HTTP 404 or asks for `api-version` | Set `LLM_API_VERSION` to the version the gateway wants. |
+| Test 2 FAIL, HTTP 400 on `tools` | The gateway won't pass tools to this deployment. **Send me the output**; this is the one blocker for the lab. |
+| Test 2 FAIL, `no tool call` | The model answered in text instead. Send me the output. |
 
 ✅ Then: `python scripts\check_lab.py --only llm` → `PASS AI model model replied: READY`
 
@@ -227,7 +247,7 @@ Pod: ____        Date: ____
 [ ] 4 API login   Intersight (__ servers) / ACI (__ nodes) / ND
 [ ] 5 MCP probe   intersight __ tools / aci 8 tools / nd __ tools
                   vNIC MACs returned for server: ________
-[ ] 6 Model       LLM_FORMAT = ______   tool call PASS
+[ ] 6 Model       plain chat PASS / tool call PASS
 [ ] 7 Agent       intersight / aci / nd / all three
 [ ] 8 Write path  create / protected block / delete / audit log
 [ ] 9 check_lab   5 x PASS
