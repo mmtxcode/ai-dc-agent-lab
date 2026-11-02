@@ -10,8 +10,8 @@ fails you know exactly which layer broke:
 
 Don't skip ahead. Each step assumes the ones before it passed.
 
-Placeholders: `<APIC_IP>`, `<ND_IP>`. The model gateway is
-`ai.connection.com`.
+Placeholders: `<APIC_IP>`, `<ND_IP>`, `<LLM_HOST>` (your AI gateway's host
+name, the part of `LLM_BASE_URL` after `https://`).
 
 ---
 
@@ -58,7 +58,7 @@ code .env
 
 | Section | What to enter |
 |---------|---------------|
-| AI model | Only `LLM_API_KEY` (your `api-key` header value) and `LLM_APP_KEY` (the `appkey` value). The URL, deployment and other settings already match your curl test. |
+| AI model | `LLM_BASE_URL` (your gateway, e.g. `https://ai.example.com`, no trailing slash), `LLM_API_KEY` (your `api-key` header value) and `LLM_APP_KEY` (the `appkey` value). `LLM_URL` is built from the base URL and `LLM_DEPLOYMENT`; change the deployment only to use another model. |
 | Intersight | `INTERSIGHT_KEY_ID`, and save the secret key as `C:\lab\keys\intersight.pem` (or change the path). |
 | ACI | `APIC_URL=https://<APIC_IP>`, `APIC_USER`, `APIC_PASSWORD` |
 | Nexus Dashboard | `ND_URL=https://<ND_IP>` (no trailing slash), `ND_USER`, `ND_API_KEY` |
@@ -75,7 +75,7 @@ user the key belongs to.
 Test-NetConnection <APIC_IP>        -Port 443 | Select ComputerName, TcpTestSucceeded
 Test-NetConnection <ND_IP>          -Port 443 | Select ComputerName, TcpTestSucceeded
 Test-NetConnection intersight.com   -Port 443 | Select ComputerName, TcpTestSucceeded
-Test-NetConnection ai.connection.com -Port 443 | Select ComputerName, TcpTestSucceeded
+Test-NetConnection <LLM_HOST>       -Port 443 | Select ComputerName, TcpTestSucceeded
 ```
 
 ✅ `TcpTestSucceeded : True` on all four.

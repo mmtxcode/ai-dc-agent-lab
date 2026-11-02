@@ -6,7 +6,7 @@ data from all three domains.
 
 **Pod per attendee:** Windows jump host (VS Code, Python), ACI simulator,
 virtual Nexus Dashboard 4.3.1 with a CML NX-OS fabric onboarded and a per-pod
-ND API key, shared read-only Intersight key, Gemini 3.1 Flash Lite via the ai.connection.com gateway.
+ND API key, shared read-only Intersight key, Gemini 3.1 Flash Lite via the AI gateway (`LLM_BASE_URL`).
 
 ## Timing (55 min, 5 min buffer)
 

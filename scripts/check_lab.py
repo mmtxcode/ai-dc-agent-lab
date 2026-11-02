@@ -45,9 +45,11 @@ print("Checking lab systems...\n")
 
 @check(".env")
 def _():
-    missing = [k for k, v in os.environ.items() if v == "CHANGE-ME"]
     if not (ROOT / ".env").exists():
         raise RuntimeError("no .env — run scripts/setup.ps1")
+    from dotenv import dotenv_values
+    missing = [k for k, v in dotenv_values(ROOT / ".env").items() if v and "CHANGE-ME" in v
+               and k != "LLM_URL"]  # LLM_URL is built from LLM_BASE_URL
     if missing:
         raise RuntimeError("still CHANGE-ME: " + ", ".join(sorted(missing)))
     return "all values set"
