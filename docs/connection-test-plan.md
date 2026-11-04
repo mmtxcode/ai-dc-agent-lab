@@ -43,7 +43,7 @@ Turn on the virtual environment for this PowerShell window (VS Code's
 terminal does this for you automatically):
 
 ```powershell
-Set-ExecutionPolicy -Scope Process Bypass
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
 .\.venv\Scripts\Activate.ps1
 ```
 
