@@ -49,6 +49,9 @@ Use the tools to get real data; never invent device names, scores, or faults.
 Before any change, state exactly what you will create or delete.
 When a question spans domains, gather data from each, then connect the dots.
 Nexus Dashboard tools take time ranges; call time_now first to resolve phrases like 'last hour'.
+To make a report: call report_collect, write the narrative from its digest only, then call
+report_build with that snapshot_id. Never put a number in the narrative that isn't in the digest;
+the exact tables are added by the report server. Finish by giving the user the file paths.
 Keep answers short and use tables where they help."""
 
 # ANSI colors (work in the VS Code terminal and Windows Terminal)
@@ -69,6 +72,11 @@ def audit(entry: dict):
 # built-in MCP server, which Cisco documents as GET-only) count as read-only
 # even if their tools don't carry the readOnlyHint annotation.
 READ_ONLY_SERVERS: set[str] = set()
+
+
+# Servers listed with "approval": false only write local files (the report
+# server writes to reports/), so their tools never prompt.
+LOCAL_ONLY_SERVERS: set[str] = set()
 
 
 def is_read_only(tool, server: str = "") -> bool:
@@ -126,6 +134,8 @@ class Agent:
                 self.tools[t.name] = (name, session, t)
             if str(spec.get("read_only", "")).lower() == "true":
                 READ_ONLY_SERVERS.add(name)
+            if str(spec.get("approval", "")).lower() == "false":
+                LOCAL_ONLY_SERVERS.add(name)
             print(f"{C['green']}✓ {name}{C['off']}: {len(listing.tools)} tools")
 
     def tool_specs(self) -> list[dict]:
@@ -135,7 +145,12 @@ class Agent:
 
     def print_tools(self):
         for name, (server, _, t) in sorted(self.tools.items()):
-            tag = "read " if is_read_only(t, server) else f"{C['yellow']}WRITE{C['off']}"
+            if is_read_only(t, server):
+                tag = "read "
+            elif server in LOCAL_ONLY_SERVERS:
+                tag = "local"
+            else:
+                tag = f"{C['yellow']}WRITE{C['off']}"
             print(f"  [{tag}] {C['cyan']}{name}{C['off']}  {C['dim']}({server}){C['off']}")
             print(f"          {C['dim']}{(t.description or '').splitlines()[0]}{C['off']}")
 
@@ -146,7 +161,7 @@ class Agent:
         server, session, tool = self.tools[name]
         print(f"{C['cyan']}→ {server}.{name}{C['off']}({json.dumps(args)})")
 
-        if not is_read_only(tool, server) and not AUTO_APPROVE:
+        if not is_read_only(tool, server) and server not in LOCAL_ONLY_SERVERS and not AUTO_APPROVE:
             answer = input(f"{C['yellow']}  This tool CHANGES the {server} environment. "
                            f"Approve? [y/N] {C['off']}").strip().lower()
             if answer != "y":

@@ -17,8 +17,9 @@ end to end.
    │
    │  MCP (list_tools / call_tool)
    ├─ stdio ─► mcp_servers/intersight_server.py ──► Intersight API  (read-only key)   ┐ servers we
-   ├─ stdio ─► mcp_servers/aci_server.py        ──► APIC simulator  (read + approved  ┘ built
-   │                                                                  writes)
+   ├─ stdio ─► mcp_servers/aci_server.py        ──► APIC simulator  (read + approved  │ built
+   │                                                                  writes)          │
+   ├─ stdio ─► mcp_servers/report_server.py     ──► HTML + PDF reports (reports/)     ┘
    └─ HTTPS ─► Nexus Dashboard 4.3.1 built-in MCP server  (/api/v1/mcp, API key)  ← vendor-provided
 ```
 
@@ -36,11 +37,12 @@ logs every call to `logs/audit.jsonl`.
 |---|-----|------|--------------|
 | 00 | [Setup and lab check](labs/00-setup.md) | 5 min | Repo, `.env`, health check |
 | 01 | [Meet MCP with Intersight](labs/01-meet-mcp-intersight.md) | 10 min | What a tool is, how the agent picks one |
-| 02 | Monitor ACI | 8 min | Health, faults, summarising noise |
+| 02 | Monitor ACI | 7 min | Health, faults, summarising noise |
 | 03 | Configure ACI safely | 10 min | Write tools, human approval, verify in the GUI |
-| 04 | Nexus Dashboard's built-in MCP server | 8 min | Remote MCP, API keys, RBAC, anomalies |
+| 04 | Nexus Dashboard's built-in MCP server | 7 min | Remote MCP, API keys, RBAC, anomalies |
 | 05 | Cross-domain troubleshooting | 10 min | One question, three domains |
-| 06 | Wrap-up: guardrails and the audit log | 4 min | What production would need |
+| 06 | [Build an environment report](labs/06-build-a-report.md) | 8 min | Code collects facts, the model writes the summary; HTML + PDF |
+| 07 | Wrap-up: guardrails and the audit log | 3 min | What production would need |
 
 See [labs/README.md](labs/README.md) for the full plan.
 
@@ -61,10 +63,11 @@ powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
 
 ```
 agent/          main.py (agent loop), llm.py (model adapter), servers.json
-mcp_servers/    intersight_server.py, aci_server.py  (ND's server runs on ND itself)
+mcp_servers/    intersight_server.py, aci_server.py, report_server.py  (ND's server runs on ND itself)
 labs/           step-by-step guides (+ images/ for screenshots)
 scripts/        setup.ps1, check_lab.py, mcp_probe.py, test_llm_toolcall.py
 docs/           connection-test-plan.md (instructor pre-flight)
 .vscode/        mcp.json (the same servers, usable from VS Code's own agent mode)
 logs/           audit.jsonl (created at runtime, git-ignored)
+reports/        generated reports + .snapshots/ (created at runtime, git-ignored)
 ```

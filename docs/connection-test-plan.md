@@ -5,7 +5,7 @@ each pod during staging. It tests one layer at a time, so when something
 fails you know exactly which layer broke:
 
 ```
-1 Jump host → 2 .env → 3 Network → 4 API login → 5 MCP (no AI) → 6 AI model → 7 Agent → 8 Write path → 9 Final check
+1 Jump host → 2 .env → 3 Network → 4 API login → 5 MCP (no AI) → 6 AI model → 7 Agent → 8 Write path → 9 Report → 10 Final check
 ```
 
 Don't skip ahead. Each step assumes the ones before it passed.
@@ -225,7 +225,53 @@ Get-Content logs\audit.jsonl -Tail 5
 
 ✅ One line per tool call, with `ok`, `error`, or `denied`.
 
-## Step 9 — Final check
+## Step 9 — Report (Lab 06) (5 min)
+
+First without the model, to check data collection and the PDF on their own:
+
+```powershell
+python scripts\mcp_probe.py report report_collect
+```
+
+✅ `OK`, a `snapshot_id`, and under `digest.sources` every entry says `ok`.
+An entry like `error: ConnectError ...` names the system that couldn't be reached.
+
+```powershell
+python scripts\mcp_probe.py report report_build snapshot_id=<SNAPSHOT_ID> "title=Connection test" "executive_summary=Test report."
+```
+
+✅ Output lists both an `html` and a `pdf` path. If there's a `pdf_note`
+instead, the PDF step failed (the HTML is still fine):
+
+| `pdf_note` says | Do this |
+|-----------------|---------|
+| `Playwright: ... msedge ...` and `no Edge or Chrome found` | Set `REPORT_BROWSER` in `.env` to the full path of `msedge.exe` |
+| `Playwright: No module named 'playwright'` | Re-run `scripts\setup.ps1` (it installs `requirements.txt`) |
+
+Open both and check they render, especially the **topology** section:
+
+```powershell
+ii (Get-ChildItem reports\*.html | Sort-Object LastWriteTime | Select-Object -Last 1)
+ii (Get-ChildItem reports\*.pdf  | Sort-Object LastWriteTime | Select-Object -Last 1)
+```
+
+The ACI diagram should show spines on top, leaves in the middle and the APIC
+below. **ND's topology output format isn't documented**, so if the ND section
+shows a table instead of a diagram, send Claude the output of
+`python scripts\mcp_probe.py nd get_nd_unified_topology` (blank out anything
+sensitive) to tune the parser.
+
+Then through the agent, as attendees will run it:
+
+```powershell
+python agent\main.py --ask "Create an environment health report covering health, inventory and topology. Title it Pod health report."
+```
+
+✅ Two cyan calls (`report_collect`, then `report_build`), **no approval
+prompt**, and an answer with both file paths. Check that the executive
+summary's numbers match the tables in the report.
+
+## Step 10 — Final check
 
 ```powershell
 python scripts\check_lab.py
@@ -250,7 +296,9 @@ Pod: ____        Date: ____
 [ ] 6 Model       plain chat PASS / tool call PASS
 [ ] 7 Agent       intersight / aci / nd / all three
 [ ] 8 Write path  create / protected block / delete / audit log
-[ ] 9 check_lab   5 x PASS
+[ ] 9 Report      collect all ok / HTML / PDF / ACI diagram / ND topology: diagram or table
+                  summary numbers match tables
+[ ] 10 check_lab  5 x PASS
 Notes:
 ```
 

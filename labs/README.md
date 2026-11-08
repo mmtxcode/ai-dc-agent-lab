@@ -8,17 +8,18 @@ data from all three domains.
 virtual Nexus Dashboard 4.3.1 with a CML NX-OS fabric onboarded and a per-pod
 ND API key, shared read-only Intersight key, Gemini 3.1 Flash Lite via the AI gateway (`LLM_BASE_URL`).
 
-## Timing (55 min, 5 min buffer)
+## Timing (60 min)
 
 | # | Lab | Min | Key prompt(s) | Callout for the room |
 |---|-----|-----|---------------|----------------------|
 | 00 | Setup | 5 | `check_lab.py` | Pre-staged: repo cloned, `.env` filled. Attendees only run the check. |
 | 01 | Meet MCP (Intersight) | 10 | "What alarms are active?" | The model sees tool *descriptions*, not code. Read-only key = least privilege. |
-| 02 | Monitor ACI | 8 | "How healthy is the fabric? Summarize the top 3 faults and what to do." | The agent turns 200 faults into 3 actions. |
+| 02 | Monitor ACI | 7 | "How healthy is the fabric? Summarize the top 3 faults and what to do." | The agent turns 200 faults into 3 actions. |
 | 03 | Configure ACI | 10 | "Build a 3-tier app tenant called `shop`: web, app, db, gateway 10.10.10.1/24." | Approval prompt; verify in APIC GUI; try to delete `common` and watch the code-level block. |
-| 04 | ND built-in MCP | 8 | "Summarize the health of each ND fabric and the top anomalies from the last 2 hours." then "Explain the root cause of the worst one." | No code to write: ND 4.3.1 ships its own MCP server. Look at `servers.json`: a URL and an API key instead of a script. The key's user RBAC applies; the server is GET-only. |
+| 04 | ND built-in MCP | 7 | "Summarize the health of each ND fabric and the top anomalies from the last 2 hours." then "Explain the root cause of the worst one." | No code to write: ND 4.3.1 ships its own MCP server. Look at `servers.json`: a URL and an API key instead of a script. The key's user RBAC applies; the server is GET-only. |
 | 05 | Cross-domain | 10 | "Server `<name>` has an alarm. Where does it connect in ACI, and is the fabric healthy there and in ND?" | The agent chains Intersight → ACI → ND without being told the steps. |
-| 06 | Wrap | 4 | Open `logs/audit.jsonl` | Every action is traceable. What production adds: RBAC, change tickets, rate limits. |
+| 06 | Build a report | 8 | "Create an environment health report covering health, inventory and topology." | Code collects the facts and builds the tables; the model writes only the summary (yellow AI-written boxes). Fact-check one number. Attendees leave with a document of their own pod. |
+| 07 | Wrap | 3 | Open `logs/audit.jsonl` | Every action is traceable, including the report. What production adds: RBAC, change tickets, rate limits. |
 
 **Stretch (fast finishers):** open `.vscode/mcp.json` and use the same three
 servers from VS Code's built-in agent mode. Point: MCP servers are reusable
@@ -44,6 +45,12 @@ across any MCP client.
 - [ ] Decide if ACI sim should also be onboarded to ND: then
       `get_nd_security_segmentation` shows tenants/EPGs, and Lab 03's new
       tenant appears in ND too — a nice cross-check
+- [ ] **Lab 06:** run test plan Step 9 on a pod; confirm the PDF comes out
+      through Edge, and whether ND's topology draws as a diagram or falls back
+      to a table (its output format isn't documented — send a sample to tune)
+- [ ] **Lab 06:** decide if attendees should take the report with them
+      (email/USB/share), and set `REPORT_AUTO_OPEN=true` if you'd rather it
+      opens by itself
 - [ ] Screenshots for each lab into `labs/images/`
 - [ ] Dry run end-to-end on one pod and time each lab
 - [ ] Tag a release (`v1.0-event`) as the known-good state

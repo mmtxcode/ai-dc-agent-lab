@@ -15,6 +15,11 @@
       "command": "${workspaceFolder}/.venv/Scripts/python.exe",
       "args": ["${workspaceFolder}/mcp_servers/aci_server.py"]
     },
+    "report": {
+      "type": "stdio",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": ["${workspaceFolder}/mcp_servers/report_server.py"]
+    },
     "nd": {
       "type": "http",
       "url": "https://${input:nd-host}/api/v1/mcp",
