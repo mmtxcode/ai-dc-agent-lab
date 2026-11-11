@@ -114,9 +114,11 @@ python scripts\mcp_probe.py aci
 python scripts\mcp_probe.py nd
 ```
 
-✅ `✓ intersight: 6 tools`, `✓ aci: 8 tools`, `✓ nd: 10 tools` (ND's count
-comes from ND itself; write down what you see). Every tool should be tagged
-`[read ]` except `aci_create_app_tenant` and `aci_delete_tenant`.
+✅ `✓ intersight: 6 tools`, `✓ aci: 20 tools`, `✓ nd: 10 tools` (ND's count
+comes from ND itself; write down what you see). Intersight and ND tools are
+all `[read ]`. ACI has 6 `[read ]` tools and 14 `[WRITE]` tools (creates,
+bindings and deletes). With `ACI_WRITE_MODE=off` in `.env`, ACI shows only
+its 6 read tools.
 
 Call one real tool on each:
 
@@ -216,14 +218,26 @@ At the `You:` prompt:
 2. `Delete the common tenant.`
    - Approve with `y` — the server itself must refuse: ✅ `Tenant 'common'
      is protected`.
-3. `Delete the conntest tenant.` → approve with `y` → ✅ gone from APIC.
-4. `/quit`, then check the audit log:
+3. Step by step, with a contract:
+   `In tenant conntest, create a filter called web-ports allowing tcp 443, a contract called web-to-db using it, make db provide it and web consume it.`
+   - ✅ Three or four approval prompts, one per change: filter, contract,
+     then the two bindings. Approve each.
+   - ✅ In APIC: **conntest → Contracts → web-to-db** exists, with `db` as
+     provider and `web` as consumer.
+   - Ask `Show me everything in tenant conntest.` The agent checks its own
+     work with `aci_get_tenant`.
+4. `Delete the conntest tenant.` → approve with `y` → ✅ gone from APIC.
+5. `/quit`, then check the audit log:
 
 ```powershell
 Get-Content logs\audit.jsonl -Tail 5
 ```
 
 ✅ One line per tool call, with `ok`, `error`, or `denied`.
+
+**Optional — dry run.** Set `ACI_DRY_RUN=true` in `.env`, start the agent
+again, and ask for any change. After approval, the tool returns the exact
+JSON it *would* send, and APIC is untouched. Set it back to `false` afterwards.
 
 ## Step 9 — Report (Lab 06) (5 min)
 
@@ -291,7 +305,7 @@ Pod: ____        Date: ____
 [ ] 2 .env        filled
 [ ] 3 Network     APIC / ND / Intersight / LLM
 [ ] 4 API login   Intersight (__ servers) / ACI (__ nodes) / ND
-[ ] 5 MCP probe   intersight __ tools / aci 8 tools / nd __ tools
+[ ] 5 MCP probe   intersight __ tools / aci 20 tools / nd __ tools
                   vNIC MACs returned for server: ________
 [ ] 6 Model       plain chat PASS / tool call PASS
 [ ] 7 Agent       intersight / aci / nd / all three

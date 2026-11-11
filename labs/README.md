@@ -15,7 +15,7 @@ ND API key, shared read-only Intersight key, Gemini 3.1 Flash Lite via the AI ga
 | 00 | Setup | 5 | `check_lab.py` | Pre-staged: repo cloned, `.env` filled. Attendees only run the check. |
 | 01 | Meet MCP (Intersight) | 10 | "What alarms are active?" | The model sees tool *descriptions*, not code. Read-only key = least privilege. |
 | 02 | Monitor ACI | 7 | "How healthy is the fabric? Summarize the top 3 faults and what to do." | The agent turns 200 faults into 3 actions. |
-| 03 | Configure ACI | 10 | "Build a 3-tier app tenant called `shop`: web, app, db, gateway 10.10.10.1/24." | Approval prompt; verify in APIC GUI; try to delete `common` and watch the code-level block. |
+| 03 | Configure ACI | 10 | "Build a 3-tier app tenant called `shop`: web, app, db, gateway 10.10.10.1/24." then "Allow https from web to app with a contract." | First a one-shot shortcut tool, then the agent chains granular tools (filter → contract → provider/consumer) with an approval per change. Verify in APIC GUI; try to delete `common` and watch the code-level block. |
 | 04 | ND built-in MCP | 7 | "Summarize the health of each ND fabric and the top anomalies from the last 2 hours." then "Explain the root cause of the worst one." | No code to write: ND 4.3.1 ships its own MCP server. Look at `servers.json`: a URL and an API key instead of a script. The key's user RBAC applies; the server is GET-only. |
 | 05 | Cross-domain | 10 | "Server `<name>` has an alarm. Where does it connect in ACI, and is the fabric healthy there and in ND?" | The agent chains Intersight → ACI → ND without being told the steps. |
 | 06 | Build a report | 8 | "Create an environment health report covering health, inventory and topology." | Code collects the facts and builds the tables; the model writes only the summary (yellow AI-written boxes). Fact-check one number. Attendees leave with a document of their own pod. |
@@ -51,6 +51,12 @@ across any MCP client.
 - [ ] **Lab 06:** decide if attendees should take the report with them
       (email/USB/share), and set `REPORT_AUTO_OPEN=true` if you'd rather it
       opens by itself
+- [ ] **ACI write tools:** the agent now sees ~40 tools with everything
+      loaded. Re-run the Lab 05 cross-domain question and confirm Flash Lite
+      still picks the right ones. If it struggles, set `ACI_WRITE_MODE=off`
+      for the read-only labs, or move to a larger deployment
+- [ ] Decide whether attendees' pods should use `ACI_WRITE_TENANT_PREFIX`
+      (e.g. `lab-`), so writes can only land in lab tenants
 - [ ] Screenshots for each lab into `labs/images/`
 - [ ] Dry run end-to-end on one pod and time each lab
 - [ ] Tag a release (`v1.0-event`) as the known-good state

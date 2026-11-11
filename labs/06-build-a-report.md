@@ -25,7 +25,7 @@ Expected:
 
 ```
 ✓ intersight: 6 tools
-✓ aci: 8 tools
+✓ aci: 20 tools
 ✓ nd: <n> tools        (the count your ND reports)
 ✓ report: 2 tools
 ```
